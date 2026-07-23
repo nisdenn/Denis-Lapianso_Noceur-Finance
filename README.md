@@ -2,9 +2,6 @@
 
 A professional Web Application built with Next.js / React.
 
-## Screenshot
-
-![Noceur Finance](PROJECT 7 - Noceur-Finance/public/favicon.png)
 
 ## Features
 

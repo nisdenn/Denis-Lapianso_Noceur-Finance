@@ -1,18 +1,50 @@
 # Tech Stack
 
-## Frontend
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Components**: shadcn/ui
-- **Icons**: Lucide React
-- **Charts**: Recharts
-- **Animations**: motion (framer-motion)
-
-## Backend / Data
-- **Database**: Google Sheets (via `google-spreadsheet` package)
-- **API**: Next.js Server Actions
-- **Authentication**: Service Account credentials (via environment variables)
-
-## Deployment
-- **Platform**: Vercel (or equivalent standard Next.js deployment)
+- **Primary Stack**: Next.js / React
+- **Dependencies**:
+  - @base-ui/react
+  - @google/genai
+  - @hookform/resolvers
+  - @radix-ui/react-dialog
+  - @radix-ui/react-label
+  - @radix-ui/react-progress
+  - @radix-ui/react-scroll-area
+  - @radix-ui/react-select
+  - @radix-ui/react-slot
+  - @radix-ui/react-tabs
+  - @supabase/ssr
+  - @supabase/supabase-js
+  - autoprefixer
+  - bcryptjs
+  - class-variance-authority
+  - clsx
+  - date-fns
+  - dotenv
+  - framer-motion
+  - jose
+  - lucide-react
+  - motion
+  - next
+  - node-fetch
+  - postcss
+  - react
+  - react-dom
+  - recharts
+  - resend
+  - sonner
+  - tailwind-merge
+  - web-push
+  - xlsx
+  - zod
+  - @tailwindcss/postcss
+  - @tailwindcss/typography
+  - @types/bcryptjs
+  - @types/node
+  - @types/react
+  - @types/react-dom
+  - @types/web-push
+  - @vitejs/plugin-react
+  - eslint
+  - eslint-config-next
+  - tailwindcss
+  - typescript

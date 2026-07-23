@@ -1,24 +1,19 @@
 # Product Requirements Document (PRD)
 
-## Objective
-Build a modern, personal finance web application called "SmartFinance" that acts as a beautiful interface on top of Google Sheets.
+## 1. Product Vision
+Create a highly efficient and intuitive Web Application tailored to the user's workflow.
 
-## Target Audience
-The personal user who wants to track money across multiple accounts (myBCA, Jago, SeaBank) and cash, but finds directly editing Google Sheets cumbersome.
+## 2. Key Features
+- **Responsive Design**: Implementation of core capabilities.
+- **Modern UI/UX**: Implementation of core capabilities.
+- **Clean Code Architecture**: Implementation of core capabilities.
+- **Server-Side Rendering (SSR)**: Implementation of core capabilities.
+- **Static Site Generation (SSG)**: Implementation of core capabilities.
+- **API Routes**: Implementation of core capabilities.
+- **Tailwind CSS Styling**: Implementation of core capabilities.
+- **Supabase Backend Integration**: Implementation of core capabilities.
+- **Authentication**: Implementation of core capabilities.
 
-## Features
-1. **Dashboard**: High-level overview of total balance, available money, income, expenses, and health score.
-2. **Transaction Management**: Add income, expense, and transfer transactions directly into Google Sheets.
-3. **Budget Buckets**: Create and track financial buckets (e.g., Emergency Fund, Vacation).
-4. **Available Money System**: Calculate available money by subtracting savings from total assets.
-5. **Monthly Planner**: Visual breakdown of income, expenses, and savings rate.
-6. **Cash Wallet**: Track physical cash separately.
-7. **Financial Health Score**: Deterministic 0-100 score based on financial metrics.
-8. **Wishlist/Goals**: Track progress for specific goals.
-
-## Out of Scope
-- Full banking app integration
-- AI chat assistants
-- Cryptocurrency or investment tracking
-- Multi-user support
-- Local databases (Prisma, Supabase, Firebase)
+## 3. User Stories
+- As a user, I want to easily install the app via `git clone https://github.com/nisdenn/Denis-Lapianso_Noceur-Finance.git` so that I can get started quickly.
+- As a user, I want to run the app using `npm run dev` without complex configurations.

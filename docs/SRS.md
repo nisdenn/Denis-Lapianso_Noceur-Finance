@@ -1,14 +1,13 @@
 # Software Requirements Specification (SRS)
 
-## Functional Requirements
-- **FR1**: The system must authenticate with Google Sheets using a Service Account.
-- **FR2**: The system must read balances and transactions from specific sheets.
-- **FR3**: The system must write new transactions to the sheets instantly.
-- **FR4**: The system must calculate the Financial Health Score based on deterministic rules.
-- **FR5**: The system must differentiate between Total Assets and Available Money.
+## 1. Introduction
+This document specifies the software requirements for **Noceur Finance**.
 
-## Non-Functional Requirements
-- **NFR1**: The application must be deployed on Vercel.
-- **NFR2**: The UI must be responsive and mobile-friendly.
-- **NFR3**: The system must use Next.js App Router and Server Actions.
-- **NFR4**: The design must follow a premium, minimal, glassmorphism-inspired aesthetic.
+## 2. Functional Requirements
+- The system must run on standard operating systems.
+- The system must provide the following features: Responsive Design, Modern UI/UX, Clean Code Architecture, Server-Side Rendering (SSR), Static Site Generation (SSG), API Routes, Tailwind CSS Styling, Supabase Backend Integration, Authentication.
+
+## 3. Non-Functional Requirements
+- **Performance**: Must load quickly and execute commands efficiently.
+- **Maintainability**: Codebase must follow clean code principles.
+- **Tech Stack**: Built using Next.js / React.

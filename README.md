@@ -1,49 +1,58 @@
 # Noceur Finance
 
-A professional project for Noceur Finance.
+A professional Web Application built with Next.js / React.
 
 ## Screenshot
 
-![Placeholder](https://via.placeholder.com/800x400.png?text=Noceur-Finance)
+![Noceur Finance](PROJECT 7 - Noceur-Finance/public/favicon.png)
 
 ## Features
 
-- Feature 1
-- Feature 2
-- Feature 3
+- Responsive Design
+- Modern UI/UX
+- Clean Code Architecture
+- Server-Side Rendering (SSR)
+- Static Site Generation (SSG)
+- API Routes
+- Tailwind CSS Styling
+- Supabase Backend Integration
+- Authentication
 
 ## Tech Stack
 
-- TBD
+- **Core**: Next.js / React
+- **Dependencies**: @base-ui/react, @google/genai, @hookform/resolvers, @radix-ui/react-dialog, @radix-ui/react-label and more...
 
 ## Folder Structure
 
-`
-+-- src/
-+-- docs/
-+-- .gitignore
-+-- README.md
-+-- LICENSE
-`
+```
+├── src/            # Source code
+├── docs/           # Project documentation (PRD, BRD, SRS)
+├── public/         # Static assets
+├── .gitignore      # Git ignored files
+├── README.md       # Project overview
+```
 
 ## Installation
 
-`ash
-git clone https://github.com/denislapianso/Denis-Lapianso_Noceur-Finance.git
+```bash
+git clone https://github.com/nisdenn/Denis-Lapianso_Noceur-Finance.git
 cd Denis-Lapianso_Noceur-Finance
-`
+npm install
+```
 
 ## Usage
 
-`ash
-# Add usage instructions here
-`
+```bash
+npm run dev
+```
 
-## Roadmap
+## Documentation
 
-- [ ] Add new features
-- [ ] Improve documentation
-- [ ] Release v1.0.0
+- [Product Requirements Document (PRD)](./docs/PRD.md)
+- [Business Requirements Document (BRD)](./docs/BRD.md)
+- [Software Requirements Specification (SRS)](./docs/SRS.md)
+- [Project Structure](./docs/PROJECT-STRUCTURE.md)
 
 ## Author
 

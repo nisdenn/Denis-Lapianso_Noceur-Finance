@@ -1,10 +1,11 @@
 export class WhatsAppClient {
+  private fonnteToken = process.env.FONNTE_TOKEN || '';
   private phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
   private accessToken = process.env.WHATSAPP_ACCESS_TOKEN || '';
   private apiVersion = process.env.WHATSAPP_API_VERSION || 'v21.0';
 
   isConfigured(): boolean {
-    return Boolean(this.phoneNumberId && this.accessToken);
+    return Boolean(this.fonnteToken || (this.phoneNumberId && this.accessToken));
   }
 
   async sendTextMessage(recipient: string, text: string) {
@@ -13,6 +14,30 @@ export class WhatsAppClient {
     if (!this.isConfigured()) {
       console.log(`[WhatsApp Mock -> ${phone}]: ${text}`);
       return { success: true, messageId: `mock_${Date.now()}` };
+    }
+
+    if (this.fonnteToken) {
+      try {
+        const response = await fetch('https://api.fonnte.com/send', {
+          method: 'POST',
+          headers: {
+            Authorization: this.fonnteToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            target: phone,
+            message: text,
+          }),
+        });
+
+        const result = await response.json();
+        if (!result.status) {
+          return { success: false, error: result.reason || 'Fonnte gagal mengirim pesan' };
+        }
+        return { success: true, messageId: result.id?.[0] || `fonnte_${Date.now()}` };
+      } catch (error: any) {
+        return { success: false, error: error.message };
+      }
     }
 
     try {
@@ -53,6 +78,11 @@ export class WhatsAppClient {
     if (!this.isConfigured()) {
       console.log(`[WhatsApp Mock Interactive -> ${phone}]: ${bodyText}`);
       return { success: true, messageId: `mock_interactive_${Date.now()}` };
+    }
+
+    if (this.fonnteToken) {
+      const optionsText = `${bodyText}\n\n${buttons.map(b => `👉 Ketik *${b.title}*`).join('\n')}`;
+      return await this.sendTextMessage(phone, optionsText);
     }
 
     try {

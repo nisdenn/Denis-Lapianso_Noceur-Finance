@@ -18,7 +18,42 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body: any = {};
+    const contentType = request.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      body = await request.json();
+    } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      body = Object.fromEntries(formData.entries());
+    } else {
+      try {
+        body = await request.json();
+      } catch {
+        body = {};
+      }
+    }
+
+    if (body.sender && (body.message !== undefined || body.text !== undefined)) {
+      const senderPhone = String(body.sender).replace(/\D/g, '');
+      const text = String(body.message || body.text || '').trim();
+      const senderName = String(body.name || 'User');
+      const messageId = String(body.id || `fonnte_${Date.now()}`);
+
+      if (senderPhone && text) {
+        try {
+          await whatsAppService.handleIncomingMessage({
+            senderPhone,
+            senderName,
+            text,
+            messageId,
+          });
+        } catch (error) {
+          console.error('Fonnte message processing failed:', error);
+        }
+      }
+
+      return NextResponse.json({ status: true }, { status: 200 });
+    }
 
     if (body.object !== 'whatsapp_business_account') {
       return NextResponse.json({ status: 'ignored' }, { status: 200 });

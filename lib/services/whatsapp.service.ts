@@ -3,7 +3,9 @@ import { financeService } from './finance.service';
 import { conversationalParser } from './parser.service';
 import { pendingActionService } from './pending-action.service';
 import { whatsAppClient } from '../whatsapp/whatsapp-client';
+import { generateAndUploadExcel } from './excel.service';
 import { SupabaseClient } from '@supabase/supabase-js';
+
 
 export class WhatsAppService {
   private client: SupabaseClient;
@@ -468,6 +470,60 @@ _(Kode ini berlaku selama 15 menit)_`;
       }
     }
 
+    if (parsedIntent.type === 'EXPORT_EXCEL') {
+      const scopeLabel: Record<string, string> = {
+        this_month: 'bulan ini',
+        last_month: 'bulan lalu',
+        '3_months': '3 bulan terakhir',
+        all: 'semua transaksi',
+      };
+      const label = scopeLabel[parsedIntent.scope] || 'bulan ini';
+
+      const processingMsg = `⏳ Sedang mempersiapkan file Excel *${label}*... Mohon tunggu sebentar.`;
+      await whatsAppClient.sendTextMessage(cleanPhone, processingMsg);
+
+      try {
+        const { data: profileData } = await this.client
+          .from('profiles')
+          .select('name')
+          .eq('id', userId)
+          .maybeSingle();
+
+        const userName = profileData?.name || account.display_name || 'User';
+        const allTransactions = await financeService.getTransactions(userId);
+
+        if (allTransactions.length === 0) {
+          const reply = `📭 Belum ada transaksi yang bisa diekspor untuk *${label}*.`;
+          await whatsAppClient.sendTextMessage(cleanPhone, reply);
+          return { replyText: reply, actionTaken: 'export_excel_empty' };
+        }
+
+        const publicUrl = await generateAndUploadExcel(
+          userId,
+          userName,
+          allTransactions,
+          parsedIntent.scope
+        );
+
+        const now = new Date();
+        const monthLabel = now.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+        const fileName = `NoceurFinance_${label.replace(/\s+/g, '_')}_${now.getFullYear()}.xlsx`;
+
+        await whatsAppClient.sendFileMessage(
+          cleanPhone,
+          publicUrl,
+          fileName,
+          `📊 *Laporan Keuangan — ${label}*\n\n✅ File Excel berhasil dibuat dan siap diunduh.\n📅 ${monthLabel}\n💡 _File ini otomatis dihapus setelah terkirim._`
+        );
+
+        return { replyText: `Berhasil mengirim file Excel laporan ${label}`, actionTaken: 'export_excel_sent' };
+      } catch (err: any) {
+        const reply = `⚠️ Gagal membuat file Excel: ${err.message || 'Terjadi kesalahan. Coba lagi nanti.'}`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'export_excel_error' };
+      }
+    }
+
     if (parsedIntent.type === 'BALANCE_QUERY') {
       const summary = await financeService.getBalanceSummary(userId);
       const lines = summary.accounts.map(
@@ -612,7 +668,11 @@ Berikut beberapa contoh pesan yang bisa kamu kirim:
 • "goal" — Cek target tabungan
 
 ↩️ *Lainnya:*
-• "undo" — Batalkan transaksi terakhir`;
+• "undo" — Batalkan transaksi terakhir
+• "export excel" — Kirim laporan Excel bulan ini
+• "export excel bulan lalu" — Laporan bulan lalu
+• "export excel semua" — Semua data transaksi`;
+
 
     await whatsAppClient.sendTextMessage(cleanPhone, helpMessage);
     return { replyText: helpMessage, actionTaken: 'sent_help' };

@@ -133,6 +133,50 @@ export class WhatsAppClient {
       return { success: false, error: error.message };
     }
   }
+
+  async sendFileMessage(
+    recipient: string,
+    fileUrl: string,
+    fileName: string,
+    caption?: string
+  ) {
+    const phone = recipient.replace(/\D/g, '');
+
+    if (!this.isConfigured()) {
+      console.log(`[WhatsApp Mock File -> ${phone}]: ${fileName} (${fileUrl})`);
+      return { success: true, messageId: `mock_file_${Date.now()}` };
+    }
+
+    if (this.fonnteToken) {
+      try {
+        const formBody = new URLSearchParams({
+          target: phone,
+          url: fileUrl,
+          filename: fileName,
+          ...(caption ? { message: caption } : {}),
+        });
+
+        const response = await fetch('https://api.fonnte.com/send', {
+          method: 'POST',
+          headers: {
+            Authorization: this.fonnteToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formBody.toString(),
+        });
+
+        const result = await response.json();
+        if (!result.status) {
+          return { success: false, error: result.reason || 'Fonnte gagal mengirim file' };
+        }
+        return { success: true, messageId: result.id?.[0] || `fonnte_file_${Date.now()}` };
+      } catch (error: any) {
+        return { success: false, error: error.message };
+      }
+    }
+
+    return { success: false, error: 'File sending only supported via Fonnte' };
+  }
 }
 
 export const whatsAppClient = new WhatsAppClient();

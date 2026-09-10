@@ -12,6 +12,7 @@ export type ParsedIntent =
   | { type: 'BUDGETS_QUERY'; raw: string }
   | { type: 'GOALS_QUERY'; raw: string }
   | { type: 'UNDO_TRANSACTION'; raw: string }
+  | { type: 'EXPORT_EXCEL'; scope: 'this_month' | 'last_month' | '3_months' | 'all'; raw: string }
   | {
       type: 'CREATE_TRANSACTION';
       transactionType: 'Income' | 'Expense' | 'Transfer';
@@ -23,6 +24,7 @@ export type ParsedIntent =
       raw: string;
     }
   | { type: 'UNKNOWN'; raw: string };
+
 
 export class ConversationalParserService {
   parseAmount(text: string): number | null {
@@ -94,6 +96,19 @@ export class ConversationalParserService {
 
     if (/^(?:undo|hapus transaksi(?: terakhir)?|batal(?:kan)? transaksi(?: terakhir)?|delete transaksi)$/i.test(lower)) {
       return { type: 'UNDO_TRANSACTION', raw: trimmed };
+    }
+
+    if (/(?:export|ekspor|kirim|download|cetak|buat).*(?:excel|spreadsheet|xls|xlsx|laporan file|file laporan|data transaksi)/i.test(lower) ||
+        /(?:excel|spreadsheet|xls).*(?:laporan|transaksi|keuangan)/i.test(lower)) {
+      let scope: 'this_month' | 'last_month' | '3_months' | 'all' = 'this_month';
+      if (/bulan lalu|last month|bulan kemarin/i.test(lower)) {
+        scope = 'last_month';
+      } else if (/3 bulan|tiga bulan|3month|three month/i.test(lower)) {
+        scope = '3_months';
+      } else if (/semua|all|seluruh|keseluruhan/i.test(lower)) {
+        scope = 'all';
+      }
+      return { type: 'EXPORT_EXCEL', scope, raw: trimmed };
     }
 
     if (/^(saldo|cek saldo|berapa saldo( gue| saya| saat ini)?|sisa uang|total saldo|balance|my balance|duit gue|uang gue)\??$/i.test(lower)) {

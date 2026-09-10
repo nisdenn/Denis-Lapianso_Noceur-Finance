@@ -9,8 +9,8 @@ export function MonthlyPlanner({ transactions }: { transactions: Transaction[] }
   const { income, expenses, savingsRate } = calculateMonthlyStats(transactions);
   
   const data = [
-    { name: 'Expenses', value: expenses, color: '#f43f5e' }, // rose-500
-    { name: 'Saved', value: Math.max(0, income - expenses), color: '#10b981' }, // emerald-500
+    { name: 'Expenses', value: expenses, color: '#f43f5e' },
+    { name: 'Saved', value: Math.max(0, income - expenses), color: '#10b981' },
   ];
 
   return (

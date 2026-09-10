@@ -8,18 +8,18 @@ export type Transaction = {
   id: string;
   date: string;
   description: string;
-  type: string; // 'Income', 'Expense', 'Transfer'
+  type: string;
   category: string;
-  categoryId: string; // UUID
-  fromAccount: string; // Name
-  fromAccountId: string; // UUID
-  toAccount: string; // Name
-  toAccountId: string; // UUID
+  categoryId: string;
+  fromAccount: string;
+  fromAccountId: string;
+  toAccount: string;
+  toAccountId: string;
   amount: number;
 };
 
 export type Account = {
-  id: string; // UUID
+  id: string;
   name: string;
   balance: number;
 };
@@ -30,7 +30,7 @@ export type BudgetBucket = {
   targetAmount: number;
   currentAmount: number;
   walletName?: string;
-  walletId?: string; // UUID
+  walletId?: string;
 };
 
 export type Goal = {

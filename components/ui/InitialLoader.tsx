@@ -8,7 +8,6 @@ export default function InitialLoader() {
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
-    // Show book loader for 700ms so page finishes hydrating smoothly
     const timer = setTimeout(() => {
       setIsFadingOut(true);
       const removeTimer = setTimeout(() => {

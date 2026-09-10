@@ -109,7 +109,7 @@ export default function RemindersForm({ initialReminders = [] }: { initialRemind
                         onBlur={(e) => {
                           if(e.target.value !== reminder.time.substring(0, 5)) {
                             const newReminder = {...reminder, time: e.target.value};
-                            handleToggleActive(newReminder); // saveReminderAction is used inside
+                            handleToggleActive(newReminder);
                           }
                         }}
                         className="bg-transparent outline-none w-[42px] cursor-pointer"

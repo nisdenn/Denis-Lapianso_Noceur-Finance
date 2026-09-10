@@ -12,11 +12,13 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from 'sonner';
+import InitialLoader from '@/components/ui/InitialLoader';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="antialiased bg-[#F1F3F5] text-slate-900 font-sans min-h-screen" suppressHydrationWarning>
+        <InitialLoader />
         {children}
         <Toaster position="bottom-center" />
       </body>

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { getTransactions } from '@/lib/db';
 import { formatCurrency } from '@/lib/finance';
 import DeleteTransactionButton from '@/components/DeleteTransactionButton';
+import ExportExcelButton from '@/components/ExportExcelButton';
 
 export const revalidate = 0;
 
@@ -11,8 +12,13 @@ export default async function TransactionsPage() {
   return (
     <div className="flex flex-col gap-6 w-full h-full p-6">
       <div className="bg-white/60 backdrop-blur-md border border-white/40 p-6 rounded-3xl shadow-sm">
-        <h1 className="text-xl font-bold tracking-tight text-slate-800">Transactions</h1>
-        <p className="text-xs text-slate-500 mt-1">Transaction history and management.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-800">Transactions</h1>
+            <p className="text-xs text-slate-500 mt-1">Transaction history and management.</p>
+          </div>
+          <ExportExcelButton />
+        </div>
       </div>
 
       <div className="flex-1 bg-white/80 backdrop-blur-xl border border-white/60 p-6 rounded-3xl shadow-sm flex flex-col gap-4 overflow-y-auto">

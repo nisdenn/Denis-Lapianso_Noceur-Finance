@@ -149,20 +149,18 @@ export class WhatsAppClient {
 
     if (this.fonnteToken) {
       try {
-        const formBody = new URLSearchParams({
-          target: phone,
-          url: fileUrl,
-          filename: fileName,
-          ...(caption ? { message: caption } : {}),
-        });
+        const formData = new FormData();
+        formData.append('target', phone);
+        formData.append('url', fileUrl);
+        formData.append('filename', fileName);
+        if (caption) formData.append('message', caption);
 
         const response = await fetch('https://api.fonnte.com/send', {
           method: 'POST',
           headers: {
             Authorization: this.fonnteToken,
-            'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: formBody.toString(),
+          body: formData,
         });
 
         const result = await response.json();

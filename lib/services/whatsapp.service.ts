@@ -344,9 +344,15 @@ _(Kode ini berlaku selama 15 menit)_`;
       }
 
       if (!fromWallet && !toWallet) {
-        const defaultWalletId = await financeService.addWallet(userId, 'Cash');
-        fromWallet = { id: defaultWalletId, name: 'Cash', balance: 0 };
-        toWallet = fromWallet;
+        const existingWallet = userWallets.find(w => w.name.toLowerCase() === 'cash') || userWallets[0];
+        if (existingWallet) {
+          fromWallet = existingWallet;
+          toWallet = existingWallet;
+        } else {
+          const defaultWalletId = await financeService.addWallet(userId, 'Cash');
+          fromWallet = { id: defaultWalletId, name: 'Cash', balance: 0 };
+          toWallet = fromWallet;
+        }
       }
 
       let category = userCategories.find(c =>

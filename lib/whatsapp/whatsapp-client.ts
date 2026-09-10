@@ -1,8 +1,16 @@
 export class WhatsAppClient {
-  private fonnteToken = process.env.FONNTE_TOKEN || '';
-  private phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
-  private accessToken = process.env.WHATSAPP_ACCESS_TOKEN || '';
-  private apiVersion = process.env.WHATSAPP_API_VERSION || 'v21.0';
+  private get fonnteToken() {
+    return process.env.FONNTE_TOKEN || '';
+  }
+  private get phoneNumberId() {
+    return process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+  }
+  private get accessToken() {
+    return process.env.WHATSAPP_ACCESS_TOKEN || '';
+  }
+  private get apiVersion() {
+    return process.env.WHATSAPP_API_VERSION || 'v21.0';
+  }
 
   isConfigured(): boolean {
     return Boolean(this.fonnteToken || (this.phoneNumberId && this.accessToken));

@@ -15,12 +15,18 @@ export default function AdminAddUserForm() {
     const form = e.currentTarget;
 
     startTransition(async () => {
-      const result = await adminAddUserAction(formData);
-      if (result && result.success) {
-        toast.success(result.message);
-        form.reset();
-      } else {
-        toast.error(result?.message || 'Failed to create user');
+      try {
+        const result = await adminAddUserAction(formData);
+        if (result && result.success) {
+          toast.success(result.message || 'User berhasil ditambahkan');
+          form.reset();
+        } else {
+          const errorMsg = typeof result?.message === 'string' ? result.message : 'Gagal menambahkan user';
+          toast.error(errorMsg);
+        }
+      } catch (err: any) {
+        const errorMsg = typeof err?.message === 'string' ? err.message : 'Gagal menambahkan user';
+        toast.error(errorMsg);
       }
     });
   };
@@ -33,6 +39,7 @@ export default function AdminAddUserForm() {
           name="username" 
           type="text" 
           required
+          placeholder="contoh: user@gmail.com"
           className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       </div>
@@ -44,6 +51,7 @@ export default function AdminAddUserForm() {
             type={visible ? 'text' : 'password'}
             required
             minLength={6}
+            placeholder="Minimal 6 karakter"
             className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           />
           <button
@@ -76,3 +84,4 @@ export default function AdminAddUserForm() {
     </form>
   );
 }
+

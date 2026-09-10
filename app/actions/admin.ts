@@ -10,7 +10,7 @@ export async function adminAddUserAction(formData: FormData) {
   const { data: { user }, error: authError } = await supabaseServer.auth.getUser();
 
   if (authError || !user) {
-     redirect('/login?error=Unauthorized');
+    redirect('/login?error=Unauthorized');
   }
 
   const { data: profile } = await supabaseServer.from('profiles').select('role').eq('id', user.id).single();
@@ -19,39 +19,45 @@ export async function adminAddUserAction(formData: FormData) {
     redirect('/login?error=Unauthorized');
   }
 
-  const username = formData.get('username') as string;
+  const username = (formData.get('username') as string || '').trim();
   const password = formData.get('password') as string;
-  const role = formData.get('role') as string || 'user';
+  const role = (formData.get('role') as string || 'user').trim();
 
-  if (!username || !password) return;
+  if (!username || !password) {
+    return { success: false, message: 'Username dan password wajib diisi' };
+  }
+
+  if (password.length < 6) {
+    return { success: false, message: 'Password minimal 6 karakter' };
+  }
 
   const email = username.includes('@') ? username : `${username}@noceur.finance`;
 
   try {
     const adminAuthClient = createAdminClient();
     const { data, error } = await adminAuthClient.auth.admin.createUser({
-      email: email,
-      password: password,
+      email,
+      password,
       email_confirm: true,
-      user_metadata: { role: role }
+      user_metadata: { role }
     });
 
     if (error) {
-      console.error('Supabase admin create user error:', error.message);
-      return { success: false, message: error.message };
+      return { success: false, message: error.message || 'Gagal membuat user' };
     }
 
     if (data.user) {
       await adminAuthClient
         .from('profiles')
-        .update({ role: role })
+        .update({ role, username: username.includes('@') ? username.split('@')[0] : username })
         .eq('id', data.user.id);
     }
     
     revalidatePath('/admin');
-    return { success: true, message: 'User created successfully' };
+    return { success: true, message: 'User berhasil ditambahkan' };
   } catch (error: any) {
-    console.error('Error creating user:', error.message);
-    return { success: false, message: error.message || 'An error occurred' };
+    const errMsg = typeof error?.message === 'string' ? error.message : 'Terjadi kesalahan saat menambahkan user';
+    return { success: false, message: errMsg };
   }
 }
+

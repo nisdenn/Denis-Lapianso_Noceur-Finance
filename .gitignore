@@ -52,3 +52,6 @@ Thumbs.db
 .aistudio/
 tmp/
 temp/
+
+# Documentation & Private
+docs/

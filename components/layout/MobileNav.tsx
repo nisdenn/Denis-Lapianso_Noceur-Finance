@@ -19,7 +19,7 @@ export async function MobileNav() {
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || user?.user_metadata?.role === 'admin';
 
   if (isAdmin) {
     links.push({ name: 'Admin', href: '/admin', icon: Shield });

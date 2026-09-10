@@ -14,7 +14,7 @@ export async function adminAddUserAction(formData: FormData) {
   }
 
   const { data: profile } = await supabaseServer.from('profiles').select('role').eq('id', user.id).single();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || user.user_metadata?.role === 'admin';
   if (!isAdmin) {
     redirect('/login?error=Unauthorized');
   }
@@ -39,6 +39,13 @@ export async function adminAddUserAction(formData: FormData) {
     if (error) {
       console.error('Supabase admin create user error:', error.message);
       return { success: false, message: error.message };
+    }
+
+    if (data.user) {
+      await adminAuthClient
+        .from('profiles')
+        .update({ role: role })
+        .eq('id', data.user.id);
     }
     
     revalidatePath('/admin');

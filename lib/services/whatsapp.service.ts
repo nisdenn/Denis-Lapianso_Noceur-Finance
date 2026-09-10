@@ -248,7 +248,7 @@ _(Kode ini berlaku selama 15 menit)_`;
     if (activePending) {
       if (
         params.buttonPayload === 'action_confirm' ||
-        /^(ya|y|simpan|ok|oke|yes|confirm|deal|lanjut|sip|save)$/i.test(rawText)
+        /^(ya|y|iya|simpan|ok|oke|yes|confirm|deal|lanjut|sip|save|betul|bener|benar|✅|✅\s*simpan)$/i.test(rawText.trim())
       ) {
         const confirmResult = await pendingActionService.confirmPendingAction(activePending.id);
         if (confirmResult.success) {
@@ -276,7 +276,7 @@ _(Kode ini berlaku selama 15 menit)_`;
 
       if (
         params.buttonPayload === 'action_cancel' ||
-        /^(batal|cancel|gak jadi|ga jadi|jangan|stop|ga|tidak)$/i.test(rawText)
+        /^(batal|cancel|gak jadi|ga jadi|jangan|stop|ga|tidak|nggak|g|❌|❌\s*batal)$/i.test(rawText.trim())
       ) {
         await pendingActionService.cancelPendingAction(activePending.id);
         const reply = `❌ Transaksi telah dibatalkan.`;

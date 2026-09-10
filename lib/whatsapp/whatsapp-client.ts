@@ -81,7 +81,7 @@ export class WhatsAppClient {
     }
 
     if (this.fonnteToken) {
-      const optionsText = `${bodyText}\n\n${buttons.map(b => `👉 Ketik *${b.title}*`).join('\n')}`;
+      const optionsText = `${bodyText}\n\n👉 Balas *YA* untuk menyimpan, atau *BATAL* untuk membatalkan.`;
       return await this.sendTextMessage(phone, optionsText);
     }
 

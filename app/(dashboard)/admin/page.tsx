@@ -18,7 +18,7 @@ export default async function AdminPage() {
     }
 
     const { data: profile } = await supabaseServer.from('profiles').select('role').eq('id', user.id).single();
-    const isAdmin = profile?.role === 'admin';
+    const isAdmin = profile?.role === 'admin' || user.user_metadata?.role === 'admin';
     if (!isAdmin) {
         redirect('/login?error=Unauthorized');
     }
@@ -53,7 +53,7 @@ export default async function AdminPage() {
             <h3 className="font-bold text-rose-700">Database Access Error</h3>
             <p className="text-sm text-rose-600 mt-1">{errorMsg}</p>
             {errorMsg.includes('Missing Supabase Service Role Key') && (
-              <p className="text-xs text-rose-500 mt-2 font-medium">Please add SUPABASE_SERVICE_ROLE_KEY to your .env.local file to enable this feature.</p>
+              <p className="text-xs text-rose-500 mt-2 font-medium">Please add SUPABASE_SERVICE_ROLE_KEY to your environment variables (in Vercel project settings and .env.local) to enable user management.</p>
             )}
           </div>
         </div>

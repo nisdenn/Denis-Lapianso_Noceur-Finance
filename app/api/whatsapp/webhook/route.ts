@@ -33,9 +33,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (body.sender && (body.message !== undefined || body.text !== undefined)) {
-      const senderPhone = String(body.sender).replace(/\D/g, '');
-      const text = String(body.message || body.text || '').trim();
+    const sender = body.sender || body.from;
+    const incomingMessage = body.message !== undefined ? body.message : body.text;
+
+    if (sender && incomingMessage !== undefined) {
+      const senderPhone = String(sender).replace(/\D/g, '');
+      const text = String(incomingMessage || '').trim();
       const senderName = String(body.name || 'User');
       const messageId = String(body.id || `fonnte_${Date.now()}`);
 

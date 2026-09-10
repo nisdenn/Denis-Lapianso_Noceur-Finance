@@ -38,8 +38,8 @@ export default async function WalletsPage() {
                     <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded-md uppercase tracking-wider">
                       Active
                     </span>
-                    <EditWalletForm name={acc.name} currentBalance={acc.balance} />
-                    <DeleteWalletButton name={acc.name} />
+                    <EditWalletForm id={acc.id} name={acc.name} currentBalance={acc.balance} />
+                    <DeleteWalletButton id={acc.id} name={acc.name} />
                   </div>
                 </div>
                 <div>

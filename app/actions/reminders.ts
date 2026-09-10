@@ -18,7 +18,7 @@ export async function saveReminderAction(formData: FormData) {
   if (time && time.length === 5) {
     time = `${time}:00`
   }
-  let day_of_week = null
+  let day_of_week: number | null = null
   if (frequency === 'weekly' && formData.get('day_of_week')) {
     day_of_week = parseInt(formData.get('day_of_week') as string)
   }

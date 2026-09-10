@@ -11,15 +11,11 @@ export async function loginAction(formData: FormData) {
     redirect('/login?error=Missing+credentials');
   }
 
-  // Basic input sanity
   if (username.length > 100 || password.length > 256) {
     redirect('/login?error=Invalid+credentials');
   }
 
   const supabase = createClient();
-  
-  // Notice we use username as email here because Supabase Auth requires an email.
-  // We can just append a dummy domain if they literally input 'admin' instead of 'admin@domain.com'.
   const email = username.includes('@') ? username : `${username}@noceur.finance`;
 
   const { error } = await supabase.auth.signInWithPassword({

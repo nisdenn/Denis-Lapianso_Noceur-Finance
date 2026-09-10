@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const MAX_AMOUNT = 999_999_999_999; // ~1 Triliun IDR
+const MAX_AMOUNT = 999_999_999_999;
 const MAX_STRING_LENGTH = 500;
 
 export const TransactionSchema = z.object({
@@ -63,7 +63,8 @@ export const GoalSchema = z.object({
 });
 
 export const WalletBalanceSchema = z.object({
-  name: z.string().min(1, 'Wallet name is required').max(100),
+  id: z.string().optional(),
+  name: z.string().min(1, 'Wallet name is required').max(100).optional(),
   balance: z
     .number({ error: 'Balance must be a number' })
     .finite('Balance must be a finite number')
@@ -85,14 +86,12 @@ export const SettingsSchema = z.object({
     .optional(),
 });
 
-/** Helper to safely parse a float and return NaN if invalid */
 export function safeParseFloat(value: string | null | undefined): number {
   if (!value) return NaN;
   const cleaned = value.replace(/[^0-9.-]+/g, '');
   return parseFloat(cleaned);
 }
 
-/** Extract flat error messages from a Zod v4 safeParse result */
 export function zodErrors(error: z.ZodError): string {
-  return error.issues.map((i) => i.message).join(', ');
+  return error.issues.map((issue) => issue.message).join(', ');
 }

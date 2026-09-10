@@ -10,7 +10,6 @@ export async function GET(request: Request) {
     const isTest = searchParams.get('test') === 'true';
 
     if (isTest) {
-      // Test mode: harus login dulu
       if (process.env.NODE_ENV !== 'development') {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -19,7 +18,6 @@ export async function GET(request: Request) {
         }
       }
     } else {
-      // Cron mode: cek CRON_SECRET
       const authHeader = request.headers.get('authorization');
       if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -74,7 +72,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'No reminders due this hour' });
     }
 
-    // Setup Web Push
     const webpush = require('web-push');
     webpush.setVapidDetails(
       'mailto:admin@example.com',
@@ -84,12 +81,11 @@ export async function GET(request: Request) {
 
     let pushCount = 0;
 
-    for (const r of dueReminders) {
-      // Kirim Web Push ke semua perangkat yang sudah subscribe
+    for (const reminder of dueReminders) {
       const { data: subs } = await supabase
         .from('push_subscriptions')
         .select('*')
-        .eq('user_id', r.user_id);
+        .eq('user_id', reminder.user_id);
 
       if (subs && subs.length > 0) {
         for (const sub of subs) {
@@ -101,14 +97,13 @@ export async function GET(request: Request) {
               },
               JSON.stringify({
                 title: '🔔 Noceur Finance',
-                body: r.title,
+                body: reminder.title,
                 url: '/reminders'
               })
             );
             pushCount++;
           } catch (e: any) {
             console.error('Push error:', e.message);
-            // Hapus subscription yang sudah expired/invalid
             if (e.statusCode === 410) {
               await supabase
                 .from('push_subscriptions')

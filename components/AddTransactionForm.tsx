@@ -15,7 +15,6 @@ export default function AddTransactionForm({ wallets }: { wallets: { name: strin
     setIsSubmitting(true);
     try {
       const formData = new FormData(form);
-      // Ensure the category value from the state is used
       formData.set('category', category);
       await submitTransaction(formData);
       toast.success('Transaction added successfully!');

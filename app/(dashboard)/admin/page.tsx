@@ -11,7 +11,6 @@ export default async function AdminPage() {
   let errorMsg = '';
   
   try {
-    // Check auth
     const supabaseServer = createClient();
     const { data: { user }, error: authError } = await supabaseServer.auth.getUser();
     if (authError || !user) {
@@ -30,11 +29,10 @@ export default async function AdminPage() {
     if (error) {
       errorMsg = error.message;
     } else {
-      // Map to old structure
-      users = (usersData.users || []).map(u => ({
-        id: u.id,
-        username: u.email?.split('@')[0] || u.email,
-        role: u.user_metadata?.role || 'user'
+      users = (usersData.users || []).map(userItem => ({
+        id: userItem.id,
+        username: userItem.email?.split('@')[0] || userItem.email,
+        role: userItem.user_metadata?.role || 'user'
       }));
     }
   } catch (err: any) {
@@ -61,17 +59,15 @@ export default async function AdminPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
-          
-          {/* Users List */}
           <div className="bg-white/80 backdrop-blur-xl border border-white/60 p-6 rounded-3xl shadow-sm overflow-y-auto">
             <h2 className="font-bold text-slate-800 mb-4">All Users</h2>
             <div className="space-y-3">
-              {users.map(u => (
-                <div key={u.id} className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex flex-col gap-1">
+              {users.map(userItem => (
+                <div key={userItem.id} className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex flex-col gap-1">
                   <div className="flex justify-between items-center">
-                    <p className="font-bold text-slate-800">{u.username}</p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-200 text-slate-600'}`}>
-                      {u.role.toUpperCase()}
+                    <p className="font-bold text-slate-800">{userItem.username}</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${userItem.role === 'admin' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-200 text-slate-600'}`}>
+                      {userItem.role.toUpperCase()}
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1 break-all">
@@ -82,7 +78,6 @@ export default async function AdminPage() {
             </div>
           </div>
           
-          {/* Add User Form */}
           <div className="bg-white/80 backdrop-blur-xl border border-white/60 p-6 rounded-3xl shadow-sm h-fit">
             <h2 className="font-bold text-slate-800 mb-4">Create New User</h2>
             <AdminAddUserForm />

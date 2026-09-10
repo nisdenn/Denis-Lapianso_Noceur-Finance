@@ -67,6 +67,7 @@ export default async function BudgetsPage() {
                   
                   <LinkBudgetWalletSelect 
                     id={b.id} 
+                    currentWalletId={b.walletId}
                     currentWalletName={b.walletName} 
                     wallets={wallets} 
                   />

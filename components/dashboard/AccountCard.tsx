@@ -8,7 +8,6 @@ interface AccountCardProps {
 }
 
 export function AccountCard({ name, balance, percentage }: AccountCardProps) {
-  // Simple aesthetic colors based on names
   let gradient = "from-blue-500/10 to-blue-500/5";
   let textColor = "text-blue-600";
   

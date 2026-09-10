@@ -54,12 +54,8 @@ export default async function DashboardPage() {
 
       <InAppReminders dueReminders={dueReminders} />
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 flex-1">
-        
-        {/* Left Column: Overview & Accounts */}
         <div className="md:col-span-4 flex flex-col gap-6">
-          {/* Top Stats Card */}
           <div className="bg-white/80 backdrop-blur-xl border border-white/60 p-6 rounded-3xl shadow-lg shadow-slate-200/50 flex flex-col justify-between min-h-[12rem]">
             <div>
               <p className="text-sm text-slate-500 font-medium mb-1">Total Balance</p>
@@ -82,7 +78,6 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Accounts List */}
           <div className="flex-1 bg-white/60 backdrop-blur-md border border-white/40 p-5 rounded-3xl flex flex-col gap-3">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Wallets</h3>
             
@@ -129,12 +124,8 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Right Column: Transactions & Planner */}
         <div className="md:col-span-8 flex flex-col gap-6">
-          
-          {/* Top Row: Planner & Goals */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-56">
-            {/* Monthly Planner */}
             <div className="bg-white/80 backdrop-blur-xl border border-white/60 p-5 rounded-3xl shadow-sm flex flex-col">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Monthly Planner</h3>
               <div className="flex-1 flex gap-2 items-end justify-between px-2">
@@ -149,7 +140,6 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            {/* Cash Flow Summary */}
             <div className="bg-white/80 backdrop-blur-xl border border-white/60 p-5 rounded-3xl shadow-sm flex flex-col justify-center">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Cash Flow</h3>
               <div className="space-y-4">
@@ -187,7 +177,6 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Transaction Center */}
           <div className="flex-1 bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl shadow-sm flex flex-col overflow-hidden min-h-[16rem]">
             <div className="p-5 border-b border-white flex justify-between items-center bg-white/50">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Transaction Center</h3>
@@ -195,12 +184,10 @@ export default async function DashboardPage() {
             </div>
             
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2">
-              {/* Add Form */}
               <div className="p-6 border-r border-slate-100 flex flex-col gap-3">
                 <AddTransactionForm wallets={accounts} />
               </div>
 
-              {/* Recent History */}
               <div className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[16rem] md:max-h-full">
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Recently Added</p>
                 <div className="space-y-4">

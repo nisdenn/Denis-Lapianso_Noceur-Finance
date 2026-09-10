@@ -1,13 +1,14 @@
 export const dynamic = 'force-dynamic';
 
 import { getSettings } from '@/lib/db';
-import { changePasswordAction, updateSettingsAction } from '@/app/actions/settings';
 import { createClient } from '@/utils/supabase/server';
+import { whatsAppService } from '@/lib/services/whatsapp.service';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import SettingsForm from '@/components/SettingsForm';
 import ChangePasswordForm from '@/components/ChangePasswordForm';
-import PushNotificationManager from '@/components/PushNotificationManager';
+import WhatsAppSettingsCard from '@/components/WhatsAppSettingsCard';
+
 export default async function SettingsPage({ searchParams }: { searchParams: { tab?: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,8 +17,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { t
   }
 
   const settings = await getSettings();
-
-
+  const whatsAppAccount = await whatsAppService.getUserAccount(user.id);
   const currentTab = searchParams.tab || 'profile';
 
   return (
@@ -28,18 +28,22 @@ export default async function SettingsPage({ searchParams }: { searchParams: { t
       </div>
 
       <div className="flex-1 bg-white/80 backdrop-blur-xl border border-white/60 p-6 rounded-3xl shadow-sm flex flex-col overflow-hidden">
-        
-        {/* Settings Navigation Bar */}
         <div className="flex gap-6 border-b border-slate-200 pb-4 mb-6 shrink-0 overflow-x-auto">
           <Link 
             href="?tab=profile" 
-            className={`text-sm font-bold pb-4 -mb-4 transition-colors ${currentTab === 'profile' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`text-sm font-bold pb-4 -mb-4 transition-colors whitespace-nowrap ${currentTab === 'profile' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Profile & Security
           </Link>
           <Link 
+            href="?tab=whatsapp" 
+            className={`text-sm font-bold pb-4 -mb-4 transition-colors whitespace-nowrap ${currentTab === 'whatsapp' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            WhatsApp Bot 💬
+          </Link>
+          <Link 
             href="?tab=general" 
-            className={`text-sm font-bold pb-4 -mb-4 transition-colors ${currentTab === 'general' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`text-sm font-bold pb-4 -mb-4 transition-colors whitespace-nowrap ${currentTab === 'general' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}
           >
             General
           </Link>
@@ -64,6 +68,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: { t
               </>
             )}
 
+            {currentTab === 'whatsapp' && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-slate-800">WhatsApp Integration</h2>
+                <WhatsAppSettingsCard account={whatsAppAccount} />
+              </div>
+            )}
+
             {currentTab === 'general' && (
               <div className="space-y-4">
                 <h2 className="text-lg font-bold text-slate-800">General</h2>
@@ -80,7 +91,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: { t
                 </div>
               </div>
             )}
-
 
           </div>
         </div>

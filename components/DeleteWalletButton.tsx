@@ -4,13 +4,15 @@ import { useTransition } from 'react';
 import { Trash2 } from 'lucide-react';
 import { removeWalletAction } from '@/app/actions';
 
-export default function DeleteWalletButton({ name }: { name: string }) {
+export default function DeleteWalletButton({ id, name }: { id: string; name?: string }) {
   const [isPending, startTransition] = useTransition();
 
   const handleDelete = () => {
-    startTransition(() => {
-      removeWalletAction(name);
-    });
+    if (confirm(`Are you sure you want to delete ${name || 'this wallet'}?`)) {
+      startTransition(() => {
+        removeWalletAction(id);
+      });
+    }
   };
 
   return (

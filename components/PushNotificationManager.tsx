@@ -62,7 +62,6 @@ export default function PushNotificationManager() {
       setSubscription(sub);
       setIsSubscribed(true);
 
-      // Save to Supabase
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -93,7 +92,6 @@ export default function PushNotificationManager() {
       setSubscription(null);
       setIsSubscribed(false);
 
-      // Remove from Supabase
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {

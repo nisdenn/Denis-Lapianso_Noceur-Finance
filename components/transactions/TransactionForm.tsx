@@ -24,7 +24,6 @@ export function TransactionForm({ accounts }: TransactionFormProps) {
     startTransition(async () => {
       try {
         await submitTransaction(formData);
-        // We could clear form here, but revalidation will reload data.
       } catch (err: any) {
         setError(err.message || 'An error occurred while adding the transaction.');
       }
@@ -50,7 +49,7 @@ export function TransactionForm({ accounts }: TransactionFormProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select name="category" value={category} onValueChange={setCategory} required>
+              <Select name="category" value={category} onValueChange={(val) => setCategory(val || 'Expense')} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>

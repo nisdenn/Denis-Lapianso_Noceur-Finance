@@ -29,7 +29,6 @@ import {
 } from '@/lib/validation';
 
 export async function saveSettingsAction(formData: FormData) {
-  // Auth check — must be logged in
   await requireAuth();
 
   const raw = {
@@ -53,7 +52,6 @@ export async function saveSettingsAction(formData: FormData) {
 }
 
 export async function submitTransaction(formData: FormData) {
-  // Auth check — must be logged in
   await requireAuth();
 
   const raw = {
@@ -76,25 +74,18 @@ export async function submitTransaction(formData: FormData) {
 }
 
 export async function removeTransactionAction(id: string) {
-  // Auth check — must be logged in
   await requireAuth();
 
   if (!id || typeof id !== 'string' || id.trim() === '') {
     throw new Error('Invalid transaction ID.');
   }
 
-  try {
-    await deleteTransaction(id.trim());
-    await getWallets();
-    revalidatePath('/', 'layout');
-  } catch (e) {
-    console.error('removeTransactionAction error:', e);
-    throw e;
-  }
+  await deleteTransaction(id.trim());
+  await getWallets();
+  revalidatePath('/', 'layout');
 }
 
 export async function submitWallet(formData: FormData) {
-  // Auth check — must be logged in
   await requireAuth();
 
   const raw = {
@@ -108,7 +99,6 @@ export async function submitWallet(formData: FormData) {
   }
 
   const { name, initialBalance } = result.data;
-
   const newWalletId = await addWallet(name);
 
   if (initialBalance > 0) {
@@ -127,11 +117,11 @@ export async function submitWallet(formData: FormData) {
 }
 
 export async function editWalletBalanceAction(formData: FormData) {
-  // Auth check — must be logged in
   await requireAuth();
 
   const raw = {
-    name: formData.get('name') as string,
+    id: (formData.get('id') as string) || undefined,
+    name: (formData.get('name') as string) || undefined,
     balance: safeParseFloat(formData.get('balance') as string) || 0,
   };
 
@@ -140,46 +130,41 @@ export async function editWalletBalanceAction(formData: FormData) {
     throw new Error(zodErrors(result.error));
   }
 
-  const { name, balance: newBalance } = result.data;
-
+  const { id, name, balance: newBalance } = result.data;
   const wallets = await getWallets();
-  const wallet = wallets.find(w => w.name === name);
+  let wallet = id ? wallets.find(w => w.id === id) : null;
+  if (!wallet && name) {
+    wallet = wallets.find(w => w.name.toLowerCase() === name.toLowerCase());
+  }
+
   if (wallet) {
-    const difference = newBalance - wallet.balance;
-    if (difference !== 0) {
-      await addTransaction({
-        date: new Date().toISOString().split('T')[0],
-        description: 'Balance Adjustment',
-        category: difference > 0 ? 'Income' : 'Expense',
-        fromAccountId: difference > 0 ? '' : wallet.id,
-        toAccountId: difference > 0 ? wallet.id : '',
-        amount: Math.abs(difference),
-      });
-      await getWallets();
-    }
+    await updateAccountBalance(wallet.id, newBalance);
   }
 
   revalidatePath('/', 'layout');
 }
 
-export async function removeWalletAction(name: string) {
-  // Auth check — must be logged in
+export async function removeWalletAction(idOrName: string) {
   await requireAuth();
 
-  if (!name || typeof name !== 'string' || name.trim() === '') {
-    throw new Error('Invalid wallet name.');
+  if (!idOrName || typeof idOrName !== 'string' || idOrName.trim() === '') {
+    throw new Error('Invalid wallet identifier.');
   }
 
   try {
-    await deleteWallet(name.trim());
-  } catch (e) {
-    console.error('removeWalletAction error:', e);
+    const trimmed = idOrName.trim();
+    const wallets = await getWallets();
+    const wallet = wallets.find(w => w.id === trimmed || w.name.toLowerCase() === trimmed.toLowerCase());
+    if (wallet) {
+      await deleteWallet(wallet.id);
+    }
+  } catch (error) {
+    console.error('removeWalletAction error:', error);
   }
   revalidatePath('/', 'layout');
 }
 
 export async function submitBudget(formData: FormData) {
-  // Auth check — must be logged in
   await requireAuth();
 
   const raw = {
@@ -197,7 +182,6 @@ export async function submitBudget(formData: FormData) {
 }
 
 export async function removeBudgetAction(id: string) {
-  // Auth check — must be logged in
   await requireAuth();
 
   if (!id || typeof id !== 'string' || id.trim() === '') {
@@ -206,30 +190,35 @@ export async function removeBudgetAction(id: string) {
 
   try {
     await deleteBudget(id.trim());
-  } catch (e) {
-    console.error('removeBudgetAction error:', e);
+  } catch (error) {
+    console.error('removeBudgetAction error:', error);
   }
   revalidatePath('/', 'layout');
 }
 
-export async function linkBudgetWalletAction(id: string, walletName: string) {
-  // Auth check — must be logged in
+export async function linkBudgetWalletAction(id: string, walletIdOrName: string) {
   await requireAuth();
 
-  if (!id || !walletName) {
-    throw new Error('Invalid budget or wallet reference.');
+  if (!id) {
+    throw new Error('Invalid budget reference.');
   }
 
   try {
-    await linkBudgetWallet(id.trim(), walletName.trim());
-  } catch (e) {
-    console.error('linkBudgetWalletAction error:', e);
+    if (!walletIdOrName) {
+      await linkBudgetWallet(id.trim(), null);
+    } else {
+      const trimmed = walletIdOrName.trim();
+      const wallets = await getWallets();
+      const wallet = wallets.find(w => w.id === trimmed || w.name.toLowerCase() === trimmed.toLowerCase());
+      await linkBudgetWallet(id.trim(), wallet ? wallet.id : null);
+    }
+  } catch (error) {
+    console.error('linkBudgetWalletAction error:', error);
   }
   revalidatePath('/', 'layout');
 }
 
 export async function submitGoal(formData: FormData) {
-  // Auth check — must be logged in
   await requireAuth();
 
   const raw = {
@@ -247,7 +236,6 @@ export async function submitGoal(formData: FormData) {
 }
 
 export async function removeGoalAction(id: string) {
-  // Auth check — must be logged in
   await requireAuth();
 
   if (!id || typeof id !== 'string' || id.trim() === '') {
@@ -256,8 +244,8 @@ export async function removeGoalAction(id: string) {
 
   try {
     await deleteGoal(id.trim());
-  } catch (e) {
-    console.error('removeGoalAction error:', e);
+  } catch (error) {
+    console.error('removeGoalAction error:', error);
   }
   revalidatePath('/', 'layout');
 }

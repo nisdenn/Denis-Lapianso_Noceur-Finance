@@ -3,13 +3,22 @@ import { useState, useTransition } from 'react';
 import { Pencil, Check, X } from 'lucide-react';
 import { editWalletBalanceAction } from '@/app/actions';
 
-export default function EditWalletForm({ name, currentBalance }: { name: string, currentBalance: number }) {
+export default function EditWalletForm({ 
+  id, 
+  name, 
+  currentBalance 
+}: { 
+  id?: string; 
+  name: string; 
+  currentBalance: number; 
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [balance, setBalance] = useState(currentBalance.toString());
 
   const handleSave = () => {
     const formData = new FormData();
+    if (id) formData.append('id', id);
     formData.append('name', name);
     formData.append('balance', balance);
     startTransition(() => {

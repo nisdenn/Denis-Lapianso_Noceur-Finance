@@ -1,15 +1,35 @@
 import { Account, BudgetBucket, Transaction } from './types';
 
 export function calculateTotalAssets(accounts: Account[]) {
-  return accounts.reduce((sum, acc) => sum + acc.balance, 0);
+  return accounts.reduce((sum, wallet) => sum + wallet.balance, 0);
 }
 
 export function calculateTotalSavings(budgets: BudgetBucket[]) {
-  return budgets.reduce((sum, b) => sum + b.currentAmount, 0);
+  return budgets.reduce((sum, budget) => sum + budget.currentAmount, 0);
 }
 
 export function calculateAvailableMoney(totalAssets: number, totalSavings: number) {
   return totalAssets - totalSavings;
+}
+
+function parseDateSafely(dateString?: string): Date | null {
+  if (!dateString) return null;
+  if (dateString.includes('/')) {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    }
+  } else if (dateString.includes('-')) {
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      }
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    }
+  }
+  const fallback = new Date(dateString);
+  return isNaN(fallback.getTime()) ? null : fallback;
 }
 
 export function calculateMonthlyStats(transactions: Transaction[]) {
@@ -18,45 +38,18 @@ export function calculateMonthlyStats(transactions: Transaction[]) {
   const currentYear = now.getFullYear();
   let income = 0;
   let expenses = 0;
-  transactions.forEach((tx) => {
-    let txDate: Date;
-    if (tx.date) {
-      if (tx.date.includes('/')) {
-        const parts = tx.date.split('/');
-        if (parts.length === 3) {
-          // DD/MM/YYYY
-          txDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-        } else {
-          txDate = new Date(tx.date);
-        }
-      } else if (tx.date.includes('-')) {
-        const parts = tx.date.split('-');
-        if (parts.length === 3) {
-          if (parts[0].length === 4) {
-            // YYYY-MM-DD
-            txDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-          } else {
-            // DD-MM-YYYY
-            txDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-          }
-        } else {
-          txDate = new Date(tx.date);
-        }
-      } else {
-        txDate = new Date(tx.date);
-      }
-    } else {
-      return;
+
+  for (const transaction of transactions) {
+    const date = parseDateSafely(transaction.date);
+    if (!date) continue;
+
+    if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+      const type = (transaction.type || '').toLowerCase();
+      if (type === 'income') income += transaction.amount;
+      if (type === 'expense') expenses += transaction.amount;
     }
-    
-    if (txDate && !isNaN(txDate.getTime())) {
-      if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
-        const type = (tx.type || '').toLowerCase();
-        if (type === 'income') income += tx.amount;
-        if (type === 'expense') expenses += tx.amount;
-      }
-    }
-  });
+  }
+
   const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
   return { income, expenses, savingsRate };
 }
@@ -82,6 +75,7 @@ export function calculateHealthScore(
   const liquidity = totalAssets > 0 ? availableMoney / totalAssets : 0;
   if (liquidity >= 0.1 && liquidity <= 0.3) score += 10;
   else if (liquidity < 0.05) score -= 10;
+
   return Math.max(0, Math.min(100, score));
 }
 

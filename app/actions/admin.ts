@@ -6,7 +6,6 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 
 export async function adminAddUserAction(formData: FormData) {
-  // SECURITY: Ensure caller is logged in and is an admin
   const supabaseServer = createClient();
   const { data: { user }, error: authError } = await supabaseServer.auth.getUser();
 

@@ -11,14 +11,12 @@ export default async function ActivityPage() {
     redirect('/login');
   }
 
-  // Fetch streaks
   const { data: streak } = await supabase
     .from('user_streaks')
     .select('*')
     .eq('user_id', user.id)
     .single();
 
-  // Fetch last 365 days of transactions for heatmap
   const aYearAgo = new Date();
   aYearAgo.setFullYear(aYearAgo.getFullYear() - 1);
   const { data: transactions } = await supabase

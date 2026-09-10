@@ -142,24 +142,28 @@ export async function generateAndUploadExcel(
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  const { error } = await supabaseAdmin.storage
+  const { error: uploadError } = await supabaseAdmin.storage
     .from('exports')
     .upload(fileName, buffer, {
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       upsert: true,
     });
 
-  if (error) {
-    throw new Error(`Failed to upload Excel: ${error.message}`);
+  if (uploadError) {
+    throw new Error(`Failed to upload Excel: ${uploadError.message}`);
   }
 
-  const { data: urlData } = supabaseAdmin.storage
+  const { data: signedData, error: signedError } = await supabaseAdmin.storage
     .from('exports')
-    .getPublicUrl(fileName);
+    .createSignedUrl(fileName, 600);
 
-  if (!urlData?.publicUrl) {
-    throw new Error('Failed to get public URL for exported file');
+  if (signedError || !signedData?.signedUrl) {
+    throw new Error('Failed to create signed URL for exported file');
   }
 
-  return urlData.publicUrl;
+  setTimeout(() => {
+    supabaseAdmin.storage.from('exports').remove([fileName]).catch(() => {});
+  }, 620_000);
+
+  return signedData.signedUrl;
 }

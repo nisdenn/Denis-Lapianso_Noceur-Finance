@@ -65,7 +65,7 @@ export class ConversationalParserService {
       return { type: 'WALLETS_QUERY', raw: trimmed };
     }
 
-    const addWalletMatch = lower.match(/^(?:tambah|buat|bikin|add)\s+dompet\s+(.+)/i);
+    const addWalletMatch = trimmed.match(/^(?:tambah|buat|bikin|add)\s+dompet\s+(.+)/i);
     if (addWalletMatch) {
       const rest = addWalletMatch[1].trim();
       const amount = this.parseAmount(rest);
@@ -76,7 +76,7 @@ export class ConversationalParserService {
       return { type: 'ADD_WALLET', walletName: walletName || 'Baru', initialBalance: amount || 0, raw: trimmed };
     }
 
-    const adjustMatch = lower.match(/^(?:atur|edit|ubah|update|set)\s+saldo\s+(.+?)\s+([^\s]+(?:\s+(?:jt|juta|rb|k|ribu))?)$/i);
+    const adjustMatch = trimmed.match(/^(?:atur|edit|ubah|update|set)\s+saldo\s+(.+?)\s+([^\s]+(?:\s+(?:jt|juta|rb|k|ribu))?)$/i);
     if (adjustMatch) {
       const amount = this.parseAmount(adjustMatch[2]);
       if (amount !== null) {
@@ -148,10 +148,15 @@ export class ConversationalParserService {
         }
 
         let description = trimmed
-          .replace(/(?:gaji|masuk|income|dapat|terima|bonus|uang masuk)/gi, '')
           .replace(/(?:ke|di|masuk ke)\s+[a-z0-9_\-]+/gi, '')
+          .replace(/(?:gaji|masuk|income|dapat|terima|bonus|uang masuk)\b/gi, '')
           .replace(/([\d]+(?:[.,][\d]+)?\s*(?:jt|juta|rb|k|ribu)?|rp\.?\s*[\d.,]+)/gi, '')
+          .replace(/\s+/g, ' ')
           .trim();
+
+        if (toWallet) {
+          description = description.replace(new RegExp(`\\b${toWallet}\\b`, 'gi'), '').trim();
+        }
 
         if (!description || description.length < 2) {
           description = /gaji/i.test(lower) ? 'Gaji Bulanan' : 'Pemasukan';
@@ -195,10 +200,15 @@ export class ConversationalParserService {
       }
 
       let description = trimmed
-        .replace(/(?:keluar|beli|bayar|habis|ongkos|biaya|expense|pake|pakai|via|dari|lewat)\b/gi, '')
         .replace(/(?:pakai|pake|via|dari|lewat)\s+[a-z0-9_\-]+/gi, '')
+        .replace(/(?:keluar|beli|bayar|habis|ongkos|biaya|expense|pake|pakai|via|dari|lewat)\b/gi, '')
         .replace(/([\d]+(?:[.,][\d]+)?\s*(?:jt|juta|rb|k|ribu)?|rp\.?\s*[\d.,]+)/gi, '')
+        .replace(/\s+/g, ' ')
         .trim();
+
+      if (fromWallet) {
+        description = description.replace(new RegExp(`\\b${fromWallet}\\b`, 'gi'), '').trim();
+      }
 
       if (!description || description.length < 2) {
         description = categoryHint === 'Food' ? 'Makan' : 'Pengeluaran';

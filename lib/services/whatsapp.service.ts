@@ -209,61 +209,129 @@ _(Kode ini berlaku selama 15 menit)_`;
 
     const userId = account.user_id;
 
-    let conversationId: string | null = null;
-    const { data: conv } = await this.client
-      .from('whatsapp_conversations')
-      .select('id')
-      .eq('whatsapp_account_id', account.id)
-      .maybeSingle();
+    (async () => {
+      try {
+        let conversationId: string | null = null;
+        const { data: conv } = await this.client
+          .from('whatsapp_conversations')
+          .select('id')
+          .eq('whatsapp_account_id', account.id)
+          .maybeSingle();
 
-    if (conv) {
-      conversationId = conv.id;
-      await this.client
-        .from('whatsapp_conversations')
-        .update({ last_message_at: new Date().toISOString() })
-        .eq('id', conversationId);
-    } else {
-      const { data: newConv } = await this.client
-        .from('whatsapp_conversations')
-        .insert([{ whatsapp_account_id: account.id }])
-        .select('id')
-        .single();
-      conversationId = newConv?.id || null;
-    }
+        if (conv) {
+          conversationId = conv.id;
+          await this.client
+            .from('whatsapp_conversations')
+            .update({ last_message_at: new Date().toISOString() })
+            .eq('id', conversationId);
+        } else {
+          const { data: newConv } = await this.client
+            .from('whatsapp_conversations')
+            .insert([{ whatsapp_account_id: account.id }])
+            .select('id')
+            .single();
+          conversationId = newConv?.id || null;
+        }
 
-    if (conversationId) {
-      await this.client.from('whatsapp_messages').insert([
-        {
-          conversation_id: conversationId,
-          direction: 'inbound',
-          message_id: params.messageId || null,
-          content: rawText,
-          message_type: params.buttonPayload ? 'interactive' : 'text',
-        },
-      ]);
-    }
+        if (conversationId) {
+          await this.client.from('whatsapp_messages').insert([
+            {
+              conversation_id: conversationId,
+              direction: 'inbound',
+              message_id: params.messageId || null,
+              content: rawText,
+              message_type: params.buttonPayload ? 'interactive' : 'text',
+            },
+          ]);
+        }
+      } catch {}
+    })();
 
-    const activePending = await pendingActionService.getActivePendingAction(userId);
+    const [activePending, userWallets, userCategories] = await Promise.all([
+      pendingActionService.getActivePendingAction(userId),
+      financeService.getWallets(userId),
+      financeService.getCategories(userId),
+    ]);
 
     if (activePending) {
+      const lowerText = rawText.trim().toLowerCase();
+
+      if (
+        params.buttonPayload === 'action_cancel' ||
+        /^(batal|cancel|gak jadi|ga jadi|jangan|stop|ga|tidak|nggak|g|❌|❌\s*batal)$/i.test(lowerText)
+      ) {
+        await pendingActionService.cancelPendingAction(activePending.id);
+        const reply = `❌ Transaksi telah dibatalkan.`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'cancelled_transaction' };
+      }
+
+      let chosenWallet = null;
+      const numMatch = lowerText.match(/^(?:ya\s+|pilih\s+|pake\s+|pakai\s+|ke\s+|dompet\s+)?([1-9]\d*)$/);
+      if (numMatch) {
+        const idx = parseInt(numMatch[1], 10) - 1;
+        if (idx >= 0 && idx < userWallets.length) {
+          chosenWallet = userWallets[idx];
+        }
+      } else {
+        const candidateName = lowerText.replace(/^(?:ya\s+|pilih\s+|pake\s+|pakai\s+|ke\s+|dompet\s+)/, '').trim();
+        if (candidateName && !/^(ya|y|iya|simpan|ok|oke|yes|confirm|deal|lanjut|sip|save|betul|bener|benar|batal|cancel)$/.test(candidateName)) {
+          chosenWallet = userWallets.find(w =>
+            w.name.toLowerCase() === candidateName ||
+            w.name.toLowerCase().includes(candidateName) ||
+            candidateName.includes(w.name.toLowerCase())
+          );
+        }
+      }
+
+      if (chosenWallet) {
+        if (activePending.payload.type === 'Income') {
+          activePending.payload.toAccountId = chosenWallet.id;
+          activePending.payload.toAccountName = chosenWallet.name;
+        } else {
+          activePending.payload.fromAccountId = chosenWallet.id;
+          activePending.payload.fromAccountName = chosenWallet.name;
+        }
+
+        await pendingActionService.updatePendingActionPayload(activePending.id, activePending.payload);
+        const confirmResult = await pendingActionService.confirmPendingAction(activePending.id);
+
+        if (confirmResult.success) {
+          const payload = activePending.payload;
+          const updatedWallets = await financeService.getWallets(userId);
+          const affectedWallet = updatedWallets.find(w => w.id === chosenWallet.id) || chosenWallet;
+          const reply = `✅ *Transaksi Berhasil Disimpan!*\n\n📝 ${payload.description}\n💸 Rp${Number(
+            payload.amount
+          ).toLocaleString('id-ID')}\n🏷️ ${payload.category || 'Expense'}\n💳 Dompet: ${affectedWallet.name}\n💳 Sisa Saldo: Rp${affectedWallet.balance.toLocaleString('id-ID')}`;
+
+          await whatsAppClient.sendTextMessage(cleanPhone, reply);
+          return { replyText: reply, actionTaken: 'confirmed_transaction_with_wallet' };
+        } else {
+          const reply = `⚠️ ${confirmResult.error || 'Gagal menyimpan transaksi.'}`;
+          await whatsAppClient.sendTextMessage(cleanPhone, reply);
+          return { replyText: reply, actionTaken: 'confirm_failed' };
+        }
+      }
+
       if (
         params.buttonPayload === 'action_confirm' ||
-        /^(ya|y|iya|simpan|ok|oke|yes|confirm|deal|lanjut|sip|save|betul|bener|benar|✅|✅\s*simpan)$/i.test(rawText.trim())
+        /^(ya|y|iya|simpan|ok|oke|yes|confirm|deal|lanjut|sip|save|betul|bener|benar|✅|✅\s*simpan)$/i.test(lowerText)
       ) {
         const confirmResult = await pendingActionService.confirmPendingAction(activePending.id);
         if (confirmResult.success) {
           const payload = activePending.payload;
-          const wallets = await financeService.getWallets(userId);
-          const affectedWallet = wallets.find(
+          const updatedWallets = await financeService.getWallets(userId);
+          const affectedWallet = updatedWallets.find(
             w => w.id === (payload.fromAccountId || payload.toAccountId)
           );
+          const walletName = payload.fromAccountName || payload.toAccountName || affectedWallet?.name || 'Dompet';
           const walletBalanceStr = affectedWallet
             ? `\n💳 Saldo ${affectedWallet.name}: Rp${affectedWallet.balance.toLocaleString('id-ID')}`
             : '';
 
           const reply = `✅ *Transaksi Berhasil Disimpan!*\n\n📝 ${payload.description}\n💸 Rp${Number(
             payload.amount
-          ).toLocaleString('id-ID')}\n🏷️ ${payload.category || 'Expense'}${walletBalanceStr}`;
+          ).toLocaleString('id-ID')}\n🏷️ ${payload.category || 'Expense'}\n💳 Dompet: ${walletName}${walletBalanceStr}`;
 
           await whatsAppClient.sendTextMessage(cleanPhone, reply);
           return { replyText: reply, actionTaken: 'confirmed_transaction' };
@@ -274,24 +342,131 @@ _(Kode ini berlaku selama 15 menit)_`;
         }
       }
 
-      if (
-        params.buttonPayload === 'action_cancel' ||
-        /^(batal|cancel|gak jadi|ga jadi|jangan|stop|ga|tidak|nggak|g|❌|❌\s*batal)$/i.test(rawText.trim())
-      ) {
-        await pendingActionService.cancelPendingAction(activePending.id);
-        const reply = `❌ Transaksi telah dibatalkan.`;
-        await whatsAppClient.sendTextMessage(cleanPhone, reply);
-        return { replyText: reply, actionTaken: 'cancelled_transaction' };
-      }
+      await pendingActionService.cancelPendingAction(activePending.id);
     }
-
-    const userWallets = await financeService.getWallets(userId);
-    const userCategories = await financeService.getCategories(userId);
 
     const parsedIntent = await conversationalParser.parse(rawText, {
       wallets: userWallets.map(w => w.name),
       categories: userCategories.map(c => c.name),
     });
+
+    if (parsedIntent.type === 'WALLETS_QUERY') {
+      const summary = await financeService.getBalanceSummary(userId);
+      const lines = summary.accounts.map(
+        (w, idx) => `${idx + 1}. *${w.name}* — Rp${w.balance.toLocaleString('id-ID')}`
+      );
+
+      const reply = `💳 *Daftar Dompet Anda*\n\n${
+        lines.length > 0 ? lines.join('\n') : 'Belum ada dompet tercatat.'
+      }\n\n━━━━━━━━━━━━━━━\n*Total Saldo:* Rp${summary.totalAssets.toLocaleString('id-ID')}\n\n💡 _Tips:_\n• Ketik *"tambah dompet [nama] [saldo]"* untuk buat dompet baru\n• Ketik *"atur saldo [nama] [jumlah]"* untuk ubah saldo`;
+
+      await whatsAppClient.sendTextMessage(cleanPhone, reply);
+      return { replyText: reply, actionTaken: 'wallets_query' };
+    }
+
+    if (parsedIntent.type === 'ADD_WALLET') {
+      const newWalletName = parsedIntent.walletName.trim();
+      try {
+        const newWalletId = await financeService.addWallet(userId, newWalletName);
+        let initialBalanceStr = '';
+        if (parsedIntent.initialBalance && parsedIntent.initialBalance > 0) {
+          await financeService.adjustWalletBalance(userId, newWalletId, parsedIntent.initialBalance);
+          initialBalanceStr = `\n💰 *Saldo Awal:* Rp${parsedIntent.initialBalance.toLocaleString('id-ID')}`;
+        }
+        const reply = `✅ *Dompet Berhasil Ditambahkan!*\n\n💳 *Nama Dompet:* ${newWalletName}${initialBalanceStr}\n\nKetik *dompet* untuk melihat daftar semua dompet Anda.`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'added_wallet' };
+      } catch (err: any) {
+        const reply = `⚠️ Gagal menambahkan dompet: ${err.message || 'Terjadi kesalahan'}`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'add_wallet_error' };
+      }
+    }
+
+    if (parsedIntent.type === 'ADJUST_WALLET') {
+      const targetWallet = userWallets.find(
+        w => w.name.toLowerCase() === parsedIntent.walletName.toLowerCase() ||
+             w.name.toLowerCase().includes(parsedIntent.walletName.toLowerCase()) ||
+             parsedIntent.walletName.toLowerCase().includes(w.name.toLowerCase())
+      );
+
+      if (!targetWallet) {
+        const reply = `⚠️ Dompet *${parsedIntent.walletName}* tidak ditemukan.\n\nKetik *dompet* untuk melihat daftar dompet Anda.`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'adjust_wallet_not_found' };
+      }
+
+      try {
+        await financeService.adjustWalletBalance(userId, targetWallet.id, parsedIntent.amount);
+        const reply = `✅ *Saldo Dompet Berhasil Diperbarui!*\n\n💳 *Dompet:* ${targetWallet.name}\n💰 *Saldo Baru:* Rp${parsedIntent.amount.toLocaleString('id-ID')}`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'adjusted_wallet' };
+      } catch (err: any) {
+        const reply = `⚠️ Gagal mengubah saldo: ${err.message || 'Terjadi kesalahan'}`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'adjust_wallet_error' };
+      }
+    }
+
+    if (parsedIntent.type === 'BUDGETS_QUERY') {
+      const budgets = await financeService.getBudgets(userId);
+      if (budgets.length === 0) {
+        const reply = `📊 *Anggaran / Budget*\n\nAnda belum memiliki anggaran. Buat anggaran di aplikasi web Noceur Finance.`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'budgets_query_empty' };
+      }
+
+      let totalTarget = 0;
+      const lines = budgets.map(b => {
+        totalTarget += b.targetAmount;
+        const pct = b.targetAmount > 0 ? ((b.currentAmount / b.targetAmount) * 100).toFixed(0) : '0';
+        return `• *${b.name}:* Rp${b.currentAmount.toLocaleString('id-ID')} / Rp${b.targetAmount.toLocaleString('id-ID')} (${pct}%)`;
+      });
+
+      const reply = `📊 *Anggaran / Budget Anda*\n\n${lines.join('\n')}\n\n━━━━━━━━━━━━━━━\n*Total Anggaran:* Rp${totalTarget.toLocaleString('id-ID')}`;
+      await whatsAppClient.sendTextMessage(cleanPhone, reply);
+      return { replyText: reply, actionTaken: 'budgets_query' };
+    }
+
+    if (parsedIntent.type === 'GOALS_QUERY') {
+      const goals = await financeService.getGoals(userId);
+      if (goals.length === 0) {
+        const reply = `🎯 *Target Tabungan / Goals*\n\nAnda belum memiliki target tabungan. Buat goal di aplikasi web Noceur Finance.`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'goals_query_empty' };
+      }
+
+      const lines = goals.map(g => {
+        const pct = g.targetAmount > 0 ? ((g.currentAmount / g.targetAmount) * 100).toFixed(1) : '0';
+        return `• *${g.name}:* Rp${g.currentAmount.toLocaleString('id-ID')} / Rp${g.targetAmount.toLocaleString('id-ID')} (${pct}%)`;
+      });
+
+      const reply = `🎯 *Target Tabungan / Goals Anda*\n\n${lines.join('\n')}`;
+      await whatsAppClient.sendTextMessage(cleanPhone, reply);
+      return { replyText: reply, actionTaken: 'goals_query' };
+    }
+
+    if (parsedIntent.type === 'UNDO_TRANSACTION') {
+      const lastTxs = await financeService.getTransactions(userId, 1);
+      if (lastTxs.length === 0) {
+        const reply = `⚠️ Belum ada transaksi yang dapat dibatalkan.`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'undo_empty' };
+      }
+
+      const tx = lastTxs[0];
+      try {
+        await financeService.deleteTransaction(userId, tx.id);
+        const walletName = tx.fromAccount !== '-' ? tx.fromAccount : (tx.toAccount !== '-' ? tx.toAccount : 'Dompet');
+        const reply = `🗑️ *Transaksi Terakhir Berhasil Dibatalkan!*\n\n📝 ${tx.description}\n💸 Rp${tx.amount.toLocaleString('id-ID')}\n🏷️ ${tx.category}\n💳 Dompet: ${walletName}`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'undone_transaction' };
+      } catch (err: any) {
+        const reply = `⚠️ Gagal membatalkan transaksi: ${err.message || 'Terjadi kesalahan'}`;
+        await whatsAppClient.sendTextMessage(cleanPhone, reply);
+        return { replyText: reply, actionTaken: 'undo_error' };
+      }
+    }
 
     if (parsedIntent.type === 'BALANCE_QUERY') {
       const summary = await financeService.getBalanceSummary(userId);
@@ -331,14 +506,18 @@ _(Kode ini berlaku selama 15 menit)_`;
 
       if (parsedIntent.fromWalletHint) {
         const found = userWallets.find(w =>
-          w.name.toLowerCase().includes(parsedIntent.fromWalletHint!.toLowerCase())
+          w.name.toLowerCase() === parsedIntent.fromWalletHint!.toLowerCase() ||
+          w.name.toLowerCase().includes(parsedIntent.fromWalletHint!.toLowerCase()) ||
+          parsedIntent.fromWalletHint!.toLowerCase().includes(w.name.toLowerCase())
         );
         if (found) fromWallet = found;
       }
 
       if (parsedIntent.toWalletHint) {
         const found = userWallets.find(w =>
-          w.name.toLowerCase().includes(parsedIntent.toWalletHint!.toLowerCase())
+          w.name.toLowerCase() === parsedIntent.toWalletHint!.toLowerCase() ||
+          w.name.toLowerCase().includes(parsedIntent.toWalletHint!.toLowerCase()) ||
+          parsedIntent.toWalletHint!.toLowerCase().includes(w.name.toLowerCase())
         );
         if (found) toWallet = found;
       }
@@ -352,6 +531,7 @@ _(Kode ini berlaku selama 15 menit)_`;
           const defaultWalletId = await financeService.addWallet(userId, 'Cash');
           fromWallet = { id: defaultWalletId, name: 'Cash', balance: 0 };
           toWallet = fromWallet;
+          userWallets.push(fromWallet);
         }
       }
 
@@ -388,19 +568,51 @@ _(Kode ini berlaku selama 15 menit)_`;
           ? `${payload.fromAccountName} ➔ ${payload.toAccountName}`
           : payload.fromAccountName || payload.toAccountName || 'Cash';
 
-      const promptBody = `📝 *Konfirmasi Transaksi*\n\n📌 *Catatan:* ${payload.description}\n💸 *Jumlah:* Rp${payload.amount.toLocaleString(
-        'id-ID'
-      )}\n🏷️ *Kategori:* ${payload.category}\n💳 *Dompet:* ${walletDisplay}\n\nApakah transaksi ini ingin disimpan?`;
+      const walletListStr = userWallets
+        .map((w, idx) => `${idx + 1}. *${w.name}* (Rp${w.balance.toLocaleString('id-ID')})`)
+        .join('\n');
 
-      await whatsAppClient.sendInteractiveButtons(cleanPhone, promptBody, [
-        { id: 'action_confirm', title: '✅ Simpan' },
-        { id: 'action_cancel', title: '❌ Batal' },
-      ]);
+      const promptBody = `📝 *Konfirmasi Transaksi*
 
+📌 *Catatan:* ${payload.description}
+💸 *Jumlah:* Rp${payload.amount.toLocaleString('id-ID')}
+🏷️ *Kategori:* ${payload.category}
+💳 *Dompet Terpilih:* ${walletDisplay}
+
+*Pilihan Dompet:*
+${walletListStr}
+
+👉 Balas *YA* untuk simpan ke *${walletDisplay}*
+👉 Atau ketik nomor *1-${userWallets.length}* / nama dompet (contoh: *1* atau *Jago*) untuk langsung simpan ke dompet tersebut
+👉 Balas *BATAL* untuk membatalkan`;
+
+      await whatsAppClient.sendTextMessage(cleanPhone, promptBody);
       return { replyText: promptBody, actionTaken: 'created_pending_action' };
     }
 
-    const helpMessage = `🤖 *Noceur Finance Assistant*\n\nBerikut beberapa contoh pesan yang bisa kamu kirim:\n\n💸 *Catat Pengeluaran:*\n• "keluar 50rb makan siang"\n• "beli kopi 25rb pakai bca"\n• "bayar wifi 300rb"\n\n💰 *Catat Pemasukan:*\n• "gaji masuk 8 juta ke BCA"\n• "dapat 250rb freelance"\n\n🔄 *Transfer Antar Dompet:*\n• "transfer 200rb dari BCA ke Jago"\n\n📊 *Cek Keuangan:*\n• "berapa saldo gue?"\n• "bulan ini habis berapa?"`;
+    const helpMessage = `🤖 *Noceur Finance Assistant*
+
+Berikut beberapa contoh pesan yang bisa kamu kirim:
+
+💸 *Catat Transaksi:*
+• "keluar 20rb makan siang"
+• "beli kopi 25rb pakai bca"
+• "gaji masuk 8 juta ke BCA"
+• "transfer 200rb BCA ke Jago"
+
+💳 *Kelola Dompet:*
+• "dompet" — Cek daftar semua dompet & saldo
+• "tambah dompet GoPay 100rb" — Buat dompet baru
+• "atur saldo Cash 50rb" — Perbarui saldo dompet
+
+📊 *Cek Keuangan:*
+• "berapa saldo gue?" — Total saldo & aset
+• "bulan ini habis berapa?" — Laporan bulanan
+• "budget" — Cek status anggaran
+• "goal" — Cek target tabungan
+
+↩️ *Lainnya:*
+• "undo" — Batalkan transaksi terakhir`;
 
     await whatsAppClient.sendTextMessage(cleanPhone, helpMessage);
     return { replyText: helpMessage, actionTaken: 'sent_help' };

@@ -97,14 +97,37 @@ export class PendingActionService {
 
       if (action.action_type === 'create_transaction') {
         const payload = action.payload;
+        let fromAccountId = payload.fromAccountId || null;
+        let toAccountId = payload.toAccountId || null;
+
+        if (payload.type === 'Expense' && !fromAccountId) {
+          const wallets = await financeService.getWallets(action.user_id);
+          const defaultWallet = wallets.find(w => w.name.toLowerCase() === 'cash') || wallets[0];
+          if (defaultWallet) {
+            fromAccountId = defaultWallet.id;
+          } else {
+            const newId = await financeService.addWallet(action.user_id, 'Cash');
+            fromAccountId = newId;
+          }
+        } else if (payload.type === 'Income' && !toAccountId) {
+          const wallets = await financeService.getWallets(action.user_id);
+          const defaultWallet = wallets.find(w => w.name.toLowerCase() === 'cash') || wallets[0];
+          if (defaultWallet) {
+            toAccountId = defaultWallet.id;
+          } else {
+            const newId = await financeService.addWallet(action.user_id, 'Cash');
+            toAccountId = newId;
+          }
+        }
+
         const txId = await financeService.createTransaction(action.user_id, {
           date: payload.date || new Date().toISOString().split('T')[0],
           description: payload.description,
           type: payload.type,
           category: payload.category,
           categoryId: payload.categoryId || null,
-          fromAccountId: payload.fromAccountId || null,
-          toAccountId: payload.toAccountId || null,
+          fromAccountId,
+          toAccountId,
           amount: payload.amount,
         });
         execResult = { transactionId: txId };
@@ -119,6 +142,15 @@ export class PendingActionService {
     } catch (e: any) {
       return { success: false, error: e.message || 'Gagal menyimpan transaksi' };
     }
+  }
+
+  async updatePendingActionPayload(actionId: string, payload: any): Promise<boolean> {
+    const { error } = await this.client
+      .from('pending_actions')
+      .update({ payload, updated_at: new Date().toISOString() })
+      .eq('id', actionId);
+
+    return !error;
   }
 
   async cancelPendingAction(actionId: string): Promise<boolean> {

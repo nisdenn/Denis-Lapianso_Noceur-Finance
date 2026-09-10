@@ -6,6 +6,12 @@ export type ParsedIntent =
   | { type: 'BALANCE_QUERY'; raw: string }
   | { type: 'EXPENSE_QUERY'; raw: string }
   | { type: 'HELP_QUERY'; raw: string }
+  | { type: 'WALLETS_QUERY'; raw: string }
+  | { type: 'ADD_WALLET'; walletName: string; initialBalance?: number; raw: string }
+  | { type: 'ADJUST_WALLET'; walletName: string; amount: number; raw: string }
+  | { type: 'BUDGETS_QUERY'; raw: string }
+  | { type: 'GOALS_QUERY'; raw: string }
+  | { type: 'UNDO_TRANSACTION'; raw: string }
   | {
       type: 'CREATE_TRANSACTION';
       transactionType: 'Income' | 'Expense' | 'Transfer';
@@ -43,19 +49,54 @@ export class ConversationalParserService {
     return null;
   }
 
-  parseRuleBased(text: string): ParsedIntent {
+  parseRuleBased(text: string, context?: { wallets?: string[]; categories?: string[] }): ParsedIntent {
     const trimmed = text.trim();
     const lower = trimmed.toLowerCase();
 
-    if (/^(ya|y|simpan|ok|oke|yes|confirm|deal|lanjut|sip|save|action_confirm)$/i.test(lower)) {
+    if (/^(ya|y|iya|simpan|ok|oke|yes|confirm|deal|lanjut|sip|save|betul|bener|benar|action_confirm)$/i.test(lower)) {
       return { type: 'CONFIRM', raw: trimmed };
     }
 
-    if (/^(batal|cancel|gak jadi|ga jadi|jangan|stop|ga|ngga|tidak|action_cancel)$/i.test(lower)) {
+    if (/^(batal|cancel|gak jadi|ga jadi|jangan|stop|ga|ngga|nggak|tidak|action_cancel)$/i.test(lower)) {
       return { type: 'CANCEL', raw: trimmed };
     }
 
-    if (/^(saldo|cek saldo|berapa saldo( gue| saya| saat ini)?|sisa uang|total saldo|dompet|balance|my balance)\??$/i.test(lower)) {
+    if (/^(dompet|daftar dompet|cek dompet|list dompet|wallets|rekening|daftar rekening|saldo dompet)\??$/i.test(lower)) {
+      return { type: 'WALLETS_QUERY', raw: trimmed };
+    }
+
+    const addWalletMatch = lower.match(/^(?:tambah|buat|bikin|add)\s+dompet\s+(.+)/i);
+    if (addWalletMatch) {
+      const rest = addWalletMatch[1].trim();
+      const amount = this.parseAmount(rest);
+      let walletName = rest;
+      if (amount !== null) {
+        walletName = rest.replace(/([\d]+(?:[.,][\d]+)?\s*(?:jt|juta|rb|k|ribu)?|rp\.?\s*[\d.,]+)/gi, '').replace(/(?:saldo|dengan saldo|isi)\s*/gi, '').trim();
+      }
+      return { type: 'ADD_WALLET', walletName: walletName || 'Baru', initialBalance: amount || 0, raw: trimmed };
+    }
+
+    const adjustMatch = lower.match(/^(?:atur|edit|ubah|update|set)\s+saldo\s+(.+?)\s+([^\s]+(?:\s+(?:jt|juta|rb|k|ribu))?)$/i);
+    if (adjustMatch) {
+      const amount = this.parseAmount(adjustMatch[2]);
+      if (amount !== null) {
+        return { type: 'ADJUST_WALLET', walletName: adjustMatch[1].trim(), amount, raw: trimmed };
+      }
+    }
+
+    if (/^(?:budget|budgets|anggaran|cek budget|daftar budget|list budget)\??$/i.test(lower)) {
+      return { type: 'BUDGETS_QUERY', raw: trimmed };
+    }
+
+    if (/^(?:goals?|tabungan|target tabungan|impian|cek goal|target)\??$/i.test(lower)) {
+      return { type: 'GOALS_QUERY', raw: trimmed };
+    }
+
+    if (/^(?:undo|hapus transaksi(?: terakhir)?|batal(?:kan)? transaksi(?: terakhir)?|delete transaksi)$/i.test(lower)) {
+      return { type: 'UNDO_TRANSACTION', raw: trimmed };
+    }
+
+    if (/^(saldo|cek saldo|berapa saldo( gue| saya| saat ini)?|sisa uang|total saldo|balance|my balance|duit gue|uang gue)\??$/i.test(lower)) {
       return { type: 'BALANCE_QUERY', raw: trimmed };
     }
 
@@ -66,7 +107,7 @@ export class ConversationalParserService {
       return { type: 'EXPENSE_QUERY', raw: trimmed };
     }
 
-    if (/^(help|bantuan|menu|panduan|bisa apa|halo|hi|p|start|mulai)\??$/i.test(lower)) {
+    if (/^(help|bantuan|menu|panduan|bisa apa|halo|hai|hi|hey|hello|p|start|mulai|test|tes|ping)\??$/i.test(lower)) {
       return { type: 'HELP_QUERY', raw: trimmed };
     }
 
@@ -95,7 +136,16 @@ export class ConversationalParserService {
       const amount = this.parseAmount(lower);
       if (amount && amount > 0) {
         const walletMatch = lower.match(/(?:ke|di|masuk ke)\s+([a-z0-9_\-]+)/i);
-        const toWallet = walletMatch ? walletMatch[1].trim() : undefined;
+        let toWallet = walletMatch ? walletMatch[1].trim() : undefined;
+        if (!toWallet && context?.wallets?.length) {
+          for (const w of context.wallets) {
+            const wLower = w.toLowerCase();
+            if (new RegExp(`(?:^|\\s)${wLower}(?:\\s|$)`, 'i').test(lower)) {
+              toWallet = w;
+              break;
+            }
+          }
+        }
 
         let description = trimmed
           .replace(/(?:gaji|masuk|income|dapat|terima|bonus|uang masuk)/gi, '')
@@ -122,15 +172,26 @@ export class ConversationalParserService {
     const amount = this.parseAmount(lower);
     if (amount && amount > 0) {
       const walletMatch = lower.match(/(?:pakai|pake|via|dari|lewat)\s+([a-z0-9_\-]+)/i);
-      const fromWallet = walletMatch ? walletMatch[1].trim() : undefined;
+      let fromWallet = walletMatch ? walletMatch[1].trim() : undefined;
+      if (!fromWallet && context?.wallets?.length) {
+        for (const w of context.wallets) {
+          const wLower = w.toLowerCase();
+          if (new RegExp(`(?:^|\\s)${wLower}(?:\\s|$)`, 'i').test(lower)) {
+            fromWallet = w;
+            break;
+          }
+        }
+      }
 
       let categoryHint = 'Expense';
-      if (/makan|kopi|lunch|dinner|sarapan|snack|resto|food|nasi|es/i.test(lower)) {
+      if (/makan|kopi|lunch|dinner|sarapan|snack|resto|food|nasi|es|mie|ayam/i.test(lower)) {
         categoryHint = 'Food';
-      } else if (/transport|gojek|grab|bensin|toll|parkir|kereta|bus/i.test(lower)) {
+      } else if (/transport|gojek|grab|bensin|toll|tol|parkir|kereta|bus|ojek/i.test(lower)) {
         categoryHint = 'Transport';
       } else if (/belanja|beli|shopping|baju|sepatu|tokopedia|shopee/i.test(lower)) {
         categoryHint = 'Shopping';
+      } else if (/tagihan|wifi|listrik|air|pln|pdam|pulsa|kuota/i.test(lower)) {
+        categoryHint = 'Bills';
       }
 
       let description = trimmed
@@ -163,7 +224,7 @@ export class ConversationalParserService {
   ): Promise<ParsedIntent> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return this.parseRuleBased(text);
+      return this.parseRuleBased(text, context);
     }
 
     try {
@@ -197,7 +258,7 @@ Respond ONLY with a single JSON object adhering to this schema:
       });
 
       const responseText = response.text?.trim();
-      if (!responseText) return this.parseRuleBased(text);
+      if (!responseText) return this.parseRuleBased(text, context);
 
       const parsed = JSON.parse(responseText);
       if (parsed.type === 'CREATE_TRANSACTION' && parsed.amount > 0) {
@@ -219,14 +280,14 @@ Respond ONLY with a single JSON object adhering to this schema:
     } catch {
     }
 
-    return this.parseRuleBased(text);
+    return this.parseRuleBased(text, context);
   }
 
   async parse(
     text: string,
     context?: { wallets: string[]; categories: string[] }
   ): Promise<ParsedIntent> {
-    const ruleResult = this.parseRuleBased(text);
+    const ruleResult = this.parseRuleBased(text, context);
     if (ruleResult.type !== 'UNKNOWN') {
       return ruleResult;
     }
